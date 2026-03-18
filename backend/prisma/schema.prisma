@@ -1,0 +1,42 @@
+model Workflow {
+  id            String @id @default(uuid())
+  name          String
+  version       Int
+  is_active     Boolean
+  input_schema  Json
+  start_step_id String?
+}
+
+model Step {
+  id          String @id @default(uuid())
+  workflow_id String
+  name        String
+  step_type   String
+  order       Int
+  metadata    Json
+}
+
+model Rule {
+  id          String @id @default(uuid())
+  step_id     String
+  condition   String
+  next_step_id String?
+  priority    Int
+}
+
+model Execution {
+  id              String @id @default(uuid())
+  workflow_id     String
+  workflow_version Int
+  status          String
+  data            Json
+  current_step_id String?
+}
+
+model ExecutionLog {
+  id           String @id @default(uuid())
+  execution_id String
+  step_id      String
+  message      String
+  status       String
+}
