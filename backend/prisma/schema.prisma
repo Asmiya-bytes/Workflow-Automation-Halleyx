@@ -1,42 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
 model Workflow {
-  id            String @id @default(uuid())
+  id            String  @id @default(uuid())
   name          String
-  version       Int
-  is_active     Boolean
-  input_schema  Json
+  version       Int     @default(1)
+  is_active     Boolean @default(true)
+  input_schema  String?
   start_step_id String?
+
+  steps      Step[]
+  executions Execution[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model Step {
-  id          String @id @default(uuid())
-  workflow_id String
+  id          String   @id @default(uuid())
   name        String
-  step_type   String
-  order       Int
-  metadata    Json
+  workflow_id String
+  workflow    Workflow @relation(fields: [workflow_id], references: [id])
+
+  step_type String
+  order     Int
+
+  rules Rule[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model Rule {
-  id          String @id @default(uuid())
-  step_id     String
-  condition   String
+  id      String @id @default(uuid())
+  step_id String
+  step    Step   @relation(fields: [step_id], references: [id])
+
+  condition    String
   next_step_id String?
-  priority    Int
+  priority     Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model Execution {
-  id              String @id @default(uuid())
-  workflow_id     String
-  workflow_version Int
-  status          String
-  data            Json
-  current_step_id String?
-}
+  id          String   @id @default(uuid())
+  workflow_id String
+  workflow    Workflow @relation(fields: [workflow_id], references: [id])
 
-model ExecutionLog {
-  id           String @id @default(uuid())
-  execution_id String
-  step_id      String
-  message      String
-  status       String
+  workflow_version Int
+  status           String
+
+  data String
+  logs String
+
+  current_step_id String?
+  retries         Int     @default(0)
+  triggered_by    String?
+
+  started_at DateTime  @default(now())
+  ended_at   DateTime?
 }
