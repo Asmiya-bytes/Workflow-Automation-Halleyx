@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import StepBuilder from "../components/StepBuilder";
+import { API_BASE } from "../config";
 
 export default function Dashboard() {
   const [workflows, setWorkflows] = useState([]);
   const [name, setName] = useState("");
   const [logs, setLogs] = useState([]);
+  const [input, setInput] = useState({ amount: "" });
 
   const fetchWorkflows = () => {
-    fetch("http://localhost:5000/workflows")
+    fetch(`${API_BASE}/workflows`)
       .then((res) => res.json())
       .then((data) => setWorkflows(data));
   };
@@ -19,7 +21,7 @@ export default function Dashboard() {
   const createWorkflow = async () => {
     if (!name) return alert("Enter workflow name");
 
-    await fetch("http://localhost:5000/workflows", {
+    await fetch(`${API_BASE}/workflows`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -30,144 +32,170 @@ export default function Dashboard() {
   };
 
   const runWorkflow = async (id) => {
-    const res = await fetch(`http://localhost:5000/executions/run/${id}`, {
+    const res = await fetch(`${API_BASE}/executions/run/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 1500 }),
+      body: JSON.stringify({
+        data: { amount: Number(input.amount) },
+      }),
     });
+
     const data = await res.json();
 
     if (data.logs) {
-      const stepStatuses = data.logs
-        .filter((log) => log.step_name)
-        .map((log) => `${log.step_name}: ${log.status}`)
-        .join("\n");
-      alert(stepStatuses);
+      setLogs(data.logs);
     } else {
       alert(data.error || "Execution failed");
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        padding: 30,
-        fontFamily: "Arial, sans-serif",
-        background: "linear-gradient(135deg, #ffd6e0, #c6f1ff, #fff2c6)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <h1 style={{ color: "#333", marginBottom: 30 }}>⚙️ Workflow Engine</h1>
+    <div style={styles.container}>
+      <h1 style={styles.title}>⚙️ Workflow Engine</h1>
 
-      {/* CREATE WORKFLOW */}
-      <div
-        style={{
-          background: "#ffffffcc",
-          padding: 25,
-          borderRadius: 15,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          textAlign: "center",
-          marginBottom: 30,
-          width: "400px",
-        }}
-      >
-        <h3 style={{ color: "#555" }}>Create Workflow</h3>
+      {/* CREATE */}
+      <div style={styles.card}>
+        <h3>Create Workflow</h3>
         <input
+          style={styles.input}
           placeholder="Workflow Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #ccc",
-            marginRight: 10,
-            width: "60%",
-          }}
         />
-        <button
-          onClick={createWorkflow}
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            border: "none",
-            backgroundColor: "#a3cef1",
-            color: "#fff",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
+        <button style={styles.button} onClick={createWorkflow}>
           Create
         </button>
       </div>
 
+      {/* INPUT */}
+      <div style={styles.card}>
+        <h3>Execution Input</h3>
+        <input
+          style={styles.input}
+          placeholder="Amount"
+          value={input.amount}
+          onChange={(e) => setInput({ amount: e.target.value })}
+        />
+      </div>
+
       {/* WORKFLOWS */}
       {workflows.map((wf) => (
-        <div
-          key={wf.id}
-          style={{
-            background: "#ffffffcc",
-            padding: 25,
-            borderRadius: 15,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            marginBottom: 20,
-            width: "500px",
-            textAlign: "center",
-          }}
-        >
-          <h2 style={{ color: "#444" }}>{wf.name}</h2>
+        <div key={wf.id} style={styles.card}>
+          <h2>{wf.name}</h2>
 
-          {/* Steps */}
           <StepBuilder workflowId={wf.id} refresh={fetchWorkflows} />
 
-          <button
-            onClick={() => runWorkflow(wf.id)}
-            style={{
-              marginTop: 15,
-              backgroundColor: "#ffb6b9",
-              color: "#fff",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: "10px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-          >
+          <button style={styles.runButton} onClick={() => runWorkflow(wf.id)}>
             ▶ Run Workflow
           </button>
         </div>
       ))}
 
-      {/* LOGS PANEL */}
-      <div
-        style={{
-          background: "#ffffffcc",
-          padding: 25,
-          borderRadius: 15,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          marginTop: 30,
-          width: "500px",
-          textAlign: "center",
-        }}
-      >
-        <h3 style={{ color: "#555" }}>📜 Execution Logs</h3>
+      {/* LOGS */}
+      <div style={styles.card}>
+        <h3>📜 Execution Logs</h3>
 
         {logs.length === 0 ? (
-          <p style={{ color: "#666" }}>No execution yet</p>
+          <p>No execution yet</p>
         ) : (
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {logs.map((log, i) => (
-              <li key={i} style={{ marginBottom: 6, color: "#333" }}>
-                {log.step_name && `Step: ${log.step_name}`}{" "}
-                {log.rule && `Rule: ${log.rule}`} →{" "}
-                {log.status || log.result.toString()}
-              </li>
-            ))}
-          </ul>
+          logs.map((log, i) => (
+            <div key={i} style={styles.log}>
+              {log.step_name && (
+                <p>
+                  <b>Step:</b> {log.step_name}
+                </p>
+              )}
+              {log.rule && (
+                <p>
+                  <b>Rule:</b> {log.rule}
+                </p>
+              )}
+              {log.status && (
+                <p>
+                  <b>Status:</b> {log.status}
+                </p>
+              )}
+              {log.result !== undefined && (
+                <p>
+                  <b>Result:</b> {log.result.toString()}
+                </p>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>
   );
 }
+
+// 🎨 INLINE STYLES
+const styles = {
+  container: {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "40px 20px",
+    fontFamily: "Arial, sans-serif",
+    background: "linear-gradient(135deg, #ffd6e0, #c6f1ff, #fff2c6)",
+  },
+
+  title: {
+    color: "white",
+    marginBottom: "30px",
+    fontSize: "32px",
+    fontWeight: "bold",
+  },
+
+  card: {
+    background: "white",
+    padding: "20px",
+    marginBottom: "20px",
+    borderRadius: "16px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+    width: "100%",
+    maxWidth: "500px",
+    textAlign: "center",
+  },
+
+  input: {
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    width: "70%", // ✅ FIXED WIDTH (not too long)
+    margin: "10px auto", // ✅ CENTERED
+    display: "block",
+    textAlign: "center",
+    fontSize: "14px",
+  },
+
+  button: {
+    padding: "10px 18px",
+    border: "none",
+    borderRadius: "8px",
+    background: "linear-gradient(135deg, #36d1dc, #5b86e5)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: "bold",
+    marginTop: "10px",
+  },
+
+  runButton: {
+    padding: "10px 18px",
+    border: "none",
+    borderRadius: "8px",
+    background: "linear-gradient(135deg, #11998e, #38ef7d)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: "bold",
+    marginTop: "15px",
+  },
+
+  log: {
+    background: "linear-gradient(135deg, #eef2ff, #e0e7ff)",
+    padding: "12px",
+    borderRadius: "10px",
+    marginTop: "10px",
+    textAlign: "left",
+  },
+};

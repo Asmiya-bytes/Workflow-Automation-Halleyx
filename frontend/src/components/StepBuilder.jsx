@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import RuleBuilder from "./RuleBuilder";
+import { API_BASE } from "../config";
 
 export default function StepBuilder({ workflowId, refresh }) {
   const [steps, setSteps] = useState([]);
   const [name, setName] = useState("");
 
   const fetchSteps = () => {
-    fetch(`http://localhost:5000/workflows`)
-      .then(res => res.json())
-      .then(data => {
-        const wf = data.find(w => w.id === workflowId);
+    fetch(`${API_BASE}/workflows`)
+      .then((res) => res.json())
+      .then((data) => {
+        const wf = data.find((w) => w.id === workflowId);
         if (wf) setSteps(wf.steps);
       });
   };
@@ -19,16 +20,18 @@ export default function StepBuilder({ workflowId, refresh }) {
   }, []);
 
   const addStep = async () => {
-    await fetch("http://localhost:5000/steps", {
+    if (!name) return;
+
+    await fetch(`${API_BASE}/steps`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         workflow_id: workflowId,
-        name :name,
-        step_type: "task"
-      })
+        name,
+        step_type: "task",
+      }),
     });
 
     setName("");
@@ -37,7 +40,7 @@ export default function StepBuilder({ workflowId, refresh }) {
   };
 
   return (
-    <div style={{ marginTop: 10 }}>
+    <div>
       <h4>Steps</h4>
 
       <input
@@ -48,15 +51,9 @@ export default function StepBuilder({ workflowId, refresh }) {
       <button onClick={addStep}>Add Step</button>
 
       {steps.map((step) => (
-        <div key={step.id} style={{
-          border: "1px solid #ddd",
-          padding: 10,
-          marginTop: 10,
-          borderRadius: 8
-        }}>
+        <div key={step.id} className="step">
           <strong>{step.name}</strong>
 
-          {/* RULE BUILDER */}
           <RuleBuilder stepId={step.id} workflowId={workflowId} />
         </div>
       ))}
